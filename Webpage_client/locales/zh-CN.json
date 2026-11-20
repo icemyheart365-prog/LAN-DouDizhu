@@ -22,6 +22,7 @@
   "room.eyebrow": "GAME ROOM",
   "room.title": "好友牌局",
   "room.playerCount": "{count} / {total} 人",
+  "room.playerCountInitial": "0 / 3 人",
   "room.waitingForPlayers": "等待玩家加入",
   "room.allReady": "所有玩家已准备，等待房主开始游戏。",
   "room.waitingForPlayersAfterReady": "当前玩家已全部准备，等待其他玩家加入。",

@@ -22,6 +22,7 @@
   "room.eyebrow": "GAME ROOM",
   "room.title": "Friendly Game Room",
   "room.playerCount": "{count} / {total} Players",
+  "room.playerCountInitial": "0 / 3 Players",
   "room.waitingForPlayers": "Waiting for Players",
   "room.allReady": "Everyone is ready. Waiting for the host to start the game.",
   "room.waitingForPlayersAfterReady": "All current players are ready. Waiting for more players to join.",

@@ -4,13 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LAN-DouDizhu</title>
+    <title data-i18n-document-title="app.title">LAN-DouDizhu</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <main class="app">
         <header class="topbar">
-            <div class="brand">♠ LAN<span>·</span>DouDizhu</div>
+            <div class="brand">
+                ♠ <span data-i18n="app.brand">LAN · 斗地主</span>
+            </div>
 
             <div class="topbar-actions">
                 <div class="language-picker" id="language-picker">
@@ -62,13 +64,21 @@
                     <span class="eyebrow" data-i18n="room.eyebrow"></span>
                     <h2 data-i18n="room.title"></h2>
                 </div>
-                <span id="player-count">0 / 3 人</span>
+                <span id="player-count" data-i18n="room.playerCountInitial">
+                    0 / 3 人
+                </span>
             </div>
 
             <section class="players" id="players">
-                <article class="player-slot empty">等待玩家加入</article>
-                <article class="player-slot empty">等待玩家加入</article>
-                <article class="player-slot empty">等待玩家加入</article>
+                <article class="player-slot empty" data-i18n="room.waitingForPlayers">
+                    等待玩家加入
+                </article>
+                <article class="player-slot empty" data-i18n="room.waitingForPlayers">
+                    等待玩家加入
+                </article>
+                <article class="player-slot empty" data-i18n="room.waitingForPlayers">
+                    等待玩家加入
+                </article>
             </section>
 
             <section id="table" class="table">
@@ -82,8 +92,8 @@
                     <audio id="game-music" loop></audio>
                 </div>
 
-                <div id="game-message" class="game-message">
-                    等待三名玩家加入……
+                <div id="game-message" class="game-message" data-i18n="room.waiting">
+                    等待其他玩家加入……
                 </div>
                 <div id="opponent-info" class="opponent-info"></div>
                 <div id="hand" class="hand"></div>
@@ -110,7 +120,7 @@
             <p id="game-error" class="error"></p>
         </section>
 
-        <footer>
+        <footer data-i18n="app.footer">
             LAN-DouDizhu · Private LAN Game
         </footer>
     </main>
