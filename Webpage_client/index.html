@@ -1,0 +1,80 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAN-DouDizhu</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <main class="app">
+        <header class="topbar">
+            <div class="brand">♠ LAN<span>·</span>DouDizhu</div>
+            <div id="connection-status" class="status offline">未连接</div>
+        </header>
+
+        <section id="login-screen" class="login-panel">
+            <div class="hero-icon">🃏</div>
+            <h1>局域网斗地主</h1>
+            <p class="subtitle">三人牌局 · 好友同乐</p>
+
+            <form id="login-form">
+                <label for="server-address">服务器地址</label>
+                <input id="server-address" value="127.0.0.1" required>
+
+                <label for="nickname">玩家昵称</label>
+                <input id="nickname" maxlength="20" placeholder="输入你的昵称" required>
+
+                <button type="submit" class="primary-button">连接并加入房间</button>
+            </form>
+
+            <p id="login-error" class="error"></p>
+        </section>
+
+        <section id="game-screen" class="game-screen hidden">
+            <div class="table-info">
+                <div>
+                    <span class="eyebrow">GAME ROOM</span>
+                    <h2>好友牌局</h2>
+                </div>
+                <span id="player-count">0 / 3 人</span>
+            </div>
+
+            <section class="players" id="players">
+                <article class="player-slot empty">等待玩家加入</article>
+                <article class="player-slot empty">等待玩家加入</article>
+                <article class="player-slot empty">等待玩家加入</article>
+            </section>
+
+            <section id="table" class="table">
+                <div class="table-decoration">LAN · DOU DIZHU</div>
+                <div id="game-message" class="game-message">
+                    等待三名玩家加入……
+                </div>
+                <div id="opponent-info" class="opponent-info"></div>
+                <div id="hand" class="hand"></div>
+            </section>
+
+            <div class="controls">
+                <button id="ready-button" class="primary-button" disabled>
+                    准备
+                </button>
+                <button id="leave-button" class="secondary-button">
+                    离开房间
+                </button>
+            </div>
+
+            <p id="game-error" class="error"></p>
+        </section>
+
+        <footer>
+            LAN-DouDizhu · Private LAN Game
+        </footer>
+    </main>
+
+    <script src="js/network.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
