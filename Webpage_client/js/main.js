@@ -135,6 +135,15 @@ document.getElementById("ready-button").addEventListener("click", () => {
     }
 });
 
+document.getElementById("start-button").addEventListener("click", () => {
+    try {
+        document.getElementById("game-error").textContent = "";
+        network.startGame();
+    } catch (error) {
+        document.getElementById("game-error").textContent = error.message;
+    }
+});
+
 document.getElementById("leave-button").addEventListener("click", () => {
     network.close();
     location.reload();

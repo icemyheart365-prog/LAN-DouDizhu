@@ -8,6 +8,10 @@
   "game": {
     "mode": "dou_dizhu",
     "player_count": 3,
+    "start_requirements": {
+      "require_full_room": true,
+      "require_all_ready": true
+    },
     "landlord_mode": "rob",
     "deck_count": 1,
     "joker_enabled": true,

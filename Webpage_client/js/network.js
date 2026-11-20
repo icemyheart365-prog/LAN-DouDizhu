@@ -50,6 +50,10 @@ class GameNetwork {
         this.send({ type: "ready", ready: value });
     }
 
+    startGame() {
+        this.send({ type: "start_game" });
+    }
+
     close() {
         this.socket?.close();
     }

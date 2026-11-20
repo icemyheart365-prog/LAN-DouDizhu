@@ -84,3 +84,15 @@ def validate_global_config(config: dict) -> None:
 
     if not isinstance(mode, str) or not mode.strip():
         raise ConfigError("'game.mode' must be a non-empty string.")
+    start_requirements = game.get("start_requirements")
+
+    if not isinstance(start_requirements, dict):
+        raise ConfigError(
+            "'game.start_requirements' must be an object."
+        )
+
+    for key in ("require_full_room", "require_all_ready"):
+        if not isinstance(start_requirements.get(key), bool):
+            raise ConfigError(
+                f"'game.start_requirements.{key}' must be a boolean."
+            )

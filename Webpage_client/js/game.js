@@ -16,7 +16,9 @@ function renderLobby(message, myNickname) {
         if (player) {
             const name = document.createElement("strong");
             name.textContent =
-                player.nickname + (player.nickname === myNickname ? " (我)" : "");
+                player.nickname +
+                (player.nickname === myNickname ? " (我)" : "") +
+                (player.is_host ? " 👑 房主" : "");
 
             const state = document.createElement("span");
             state.className = player.ready ? "ready" : "waiting";
@@ -32,11 +34,42 @@ function renderLobby(message, myNickname) {
     }
 
     const me = message.players.find(p => p.nickname === myNickname);
-    const button = document.getElementById("ready-button");
+    const readyButton = document.getElementById("ready-button");
+    const startButton = document.getElementById("start-button");
 
-    button.disabled =
-        !me || message.players.length !== message.required_players;
-    button.textContent = me?.ready ? "取消准备" : "准备";
+    // Players can get ready before the room is full.
+    readyButton.disabled = !me;
+    readyButton.textContent = me?.ready ? "取消准备" : "准备";
+
+    // Only the room host can start the game.
+    const isHost = me?.is_host === true;
+    startButton.hidden = !isHost;
+
+    const requirements = message.start_requirements || {
+        require_full_room: true,
+        require_all_ready: true,
+    };
+
+    const roomFull =
+        message.players.length === message.required_players;
+
+    const allReady =
+        message.players.length > 0 &&
+        message.players.every(player => player.ready);
+
+    const canStart =
+        (!requirements.require_full_room || roomFull) &&
+        (!requirements.require_all_ready || allReady);
+
+    startButton.disabled = !isHost || !canStart;
+
+    if (!roomFull && requirements.require_full_room) {
+        startButton.textContent = "等待玩家加入";
+    } else if (!allReady && requirements.require_all_ready) {
+        startButton.textContent = "等待所有玩家准备";
+    } else {
+        startButton.textContent = "开始游戏";
+    }
 }
 
 function createActionButton(text, onClick, className = "secondary-button") {
@@ -56,6 +89,7 @@ function renderGame(state, playerNames, landlordMode, send) {
 
     document.getElementById("ready-button").disabled = true;
     document.getElementById("ready-button").textContent = "游戏进行中";
+    document.getElementById("start-button").hidden = true;
 
     document.getElementById("player-count").textContent = "游戏进行中";
 

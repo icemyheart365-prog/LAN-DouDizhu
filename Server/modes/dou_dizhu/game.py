@@ -44,6 +44,7 @@ class DouDiZhuGame:
 
         self.winner = None
         self.winning_team = None
+        self.end_reason = None
 
         # Reserved for a future doubling/betting phase.
         self.doubling_available = False
@@ -111,6 +112,7 @@ class DouDiZhuGame:
         self.pass_count = 0
         self.winner = None
         self.winning_team = None
+        self.end_reason = None
         self.status = "bidding"
 
     def bid(self, player_id, choice):
@@ -335,6 +337,23 @@ class DouDiZhuGame:
         index = self.player_ids.index(player_id)
         return self.player_ids[(index + 1) % 3]
 
+    def force_end(self):
+        """Terminate an active game without declaring a winner."""
+        if self.status != "playing":
+            raise GameRuleError(
+                "The game can only be force-ended during gameplay."
+            )
+
+        self.status = "finished"
+        self.winner = None
+        self.winning_team = None
+        self.end_reason = "host_terminated"
+
+        return {
+            "type": "game_terminated",
+            "reason": self.end_reason,
+        }
+
     def player_view(self, player_id):
         if player_id not in self.hands:
             raise ValueError("Unknown player.")
@@ -369,6 +388,7 @@ class DouDiZhuGame:
             "pass_count": self.pass_count,
             "winner": self.winner,
             "winning_team": self.winning_team,
+            "end_reason": self.end_reason,
             "multiplier": self.multiplier,
             "doubling_available": self.doubling_available,
         }

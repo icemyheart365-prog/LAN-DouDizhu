@@ -19,6 +19,7 @@ class WebRoom:
         self.config = config
         self.max_players = config["game"]["player_count"]
         self.players = {}
+        self.host_id = None
         self.game = None
         self.lock = asyncio.Lock()
 
@@ -28,15 +29,18 @@ class WebRoom:
     async def broadcast_lobby(self):
         message = {
             "type": "lobby",
+            "host_id": self.host_id,
             "players": [
                 {
                     "id": player["id"],
                     "nickname": player["nickname"],
                     "ready": player["ready"],
+                    "is_host": player["id"] == self.host_id,
                 }
                 for player in self.players.values()
             ],
             "required_players": self.max_players,
+            "start_requirements": self.config["game"]["start_requirements"],
         }
 
         await asyncio.gather(
@@ -56,6 +60,7 @@ class WebRoom:
                 await self.send(connection, {
                     "type": "game_state",
                     "event": event,
+                    "is_host": player["id"] == self.host_id,
                     "state": self.game.player_view(player["id"]),
                 })
             except Exception as exc:
@@ -193,6 +198,9 @@ class WebRoom:
                     "ready": False,
                 }
 
+                if self.host_id is None:
+                    self.host_id = self.players[client]["id"]
+
                 await self.send(client, {
                     "type": "joined",
                     "nickname": nickname,
@@ -224,12 +232,77 @@ class WebRoom:
 
                 self.players[client]["ready"] = message.get("ready") is True
                 await self.broadcast_lobby()
+                return
+
+            if action == "start_game":
+                if player_id != self.host_id:
+                    await self.send(client, {
+                        "type": "error",
+                        "message": "Only the room host can start the game.",
+                    })
+                    return
+
+                if self.game is not None:
+                    await self.send(client, {
+                        "type": "error",
+                        "message": "Game already started.",
+                    })
+                    return
+
+                requirements = self.config["game"]["start_requirements"]
 
                 if (
-                    len(self.players) == self.max_players
-                    and all(p["ready"] for p in self.players.values())
+                    requirements["require_full_room"]
+                    and len(self.players) != self.max_players
                 ):
-                    await self.start_game()
+                    await self.send(client, {
+                        "type": "error",
+                        "message": "The room is not full.",
+                    })
+                    return
+
+                if (
+                    requirements["require_all_ready"]
+                    and not all(
+                        player["ready"]
+                        for player in self.players.values()
+                    )
+                ):
+                    await self.send(client, {
+                        "type": "error",
+                        "message": "Not all players are ready.",
+                    })
+                    return
+
+                await self.start_game()
+                return
+
+            if action == "force_end":
+                if player_id != self.host_id:
+                    await self.send(client, {
+                        "type": "error",
+                        "message": "Only the room host can force-end the game.",
+                    })
+                    return
+
+                if self.game is None:
+                    await self.send(client, {
+                        "type": "error",
+                        "message": "The game has not started.",
+                    })
+                    return
+
+                try:
+                    result = self.game.force_end()
+                except GameRuleError as exc:
+                    await self.send(client, {
+                        "type": "error",
+                        "message": str(exc),
+                    })
+                    return
+
+                await self.broadcast_game(result["type"])
+                await self.send_event("房主强制结束了游戏。")
                 return
 
             if self.game is None:
