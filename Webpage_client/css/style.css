@@ -315,3 +315,52 @@ footer {
         margin: 2px;
     }
 }
+
+.music-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 15px 0;
+    padding: 10px;
+    border-radius: 12px;
+    background: #102d20aa;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.music-panel input[type="file"] {
+    max-width: 180px;
+    font-size: 11px;
+    padding: 5px;
+}
+
+.music-panel input[type="range"] {
+    width: 85px;
+    accent-color: var(--accent);
+}
+
+.music-panel button {
+    padding: 7px 12px;
+    font-size: 12px;
+}
+.card {
+    cursor: pointer;
+    user-select: none;
+}
+
+.card.selected {
+    transform: translateY(-14px);
+    outline: 2px solid #facc15;
+}
+
+.card:disabled {
+    cursor: default;
+}
+
+#action-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
