@@ -1,0 +1,67 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8765,
+    "log_level": "INFO"
+  },
+  "game": {
+    "mode": "dou_dizhu",
+    "player_count": 3,
+    "landlord_mode": "rob",
+    "deck_count": 1,
+    "joker_enabled": true,
+    "cards_per_player": 17,
+    "bottom_cards": 3
+  },
+  "timer": {
+    "enabled": true,
+    "ready": 0,
+    "bidding": 30,
+    "rob_landlord": 30,
+    "doubling": 20,
+    "playing": {
+      "has_control": 45,
+      "no_control": 20
+    },
+    "timeout_action": {
+      "ready": "wait",
+      "bidding": "pass",
+      "rob_landlord": "pass",
+      "doubling": "decline",
+      "has_control": "wait",
+      "no_control": "pass"
+    }
+  },
+  "scoring": {
+    "enabled": true,
+    "initial_score": 1000,
+    "base_stake": 1,
+    "allow_doubling": true,
+    "bomb_multiplier": 2,
+    "rocket_multiplier": 2,
+    "spring_multiplier": 2,
+    "anti_spring_multiplier": 2,
+    "maximum_multiplier": 0
+  },
+  "room": {
+    "join_code_length": 6,
+    "allow_reconnect": true,
+    "reconnect_timeout": 120
+  },
+  "restart": {
+    "preserve_players": true,
+    "preserve_scores": true,
+    "clear_current_game": true
+  },
+  "interface": {
+    "terminal_enabled": true,
+    "web_enabled": true,
+    "language": "zh-CN",
+    "show_opponent_card_count": true
+  },
+  "admin": {
+    "allow_soft_restart": true,
+    "allow_force_restart": true,
+    "confirm_force_restart": true
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "dou_dizhu",
+  "name": "斗地主",
+  "version": "1.0.0",
+  "entry_point": "game.py",
+  "validator": "validate.py",
+  "player_count": {
+    "minimum": 3,
+    "maximum": 3
+  },
+  "landlord_modes": [
+    "classic",
+    "rob"
+  ]
+}

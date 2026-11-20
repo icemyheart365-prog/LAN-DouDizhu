@@ -1,0 +1,62 @@
+import ipaddress
+import json
+from pathlib import Path
+
+
+class ConfigError(Exception):
+    """Raised when the server configuration is invalid."""
+
+
+def load_config(config_path: Path) -> dict:
+    if not config_path.is_file():
+        raise ConfigError(f"Configuration file not found: {config_path}")
+
+    try:
+        with config_path.open("r", encoding="utf-8") as file:
+            config = json.load(file)
+    except json.JSONDecodeError as exc:
+        raise ConfigError(
+            f"Invalid JSON in {config_path}: line {exc.lineno}, "
+            f"column {exc.colno}: {exc.msg}"
+        ) from exc
+    except OSError as exc:
+        raise ConfigError(f"Cannot read {config_path}: {exc}") from exc
+
+    if not isinstance(config, dict):
+        raise ConfigError("Configuration root must be a JSON object.")
+
+    return config
+
+
+def validate_global_config(config: dict) -> None:
+    server = config.get("server")
+
+    if not isinstance(server, dict):
+        raise ConfigError("'server' must be an object.")
+
+    host = server.get("host")
+    if not isinstance(host, str) or not host:
+        raise ConfigError("'server.host' must be a non-empty IPv4 address.")
+
+    try:
+        ipaddress.IPv4Address(host)
+    except ipaddress.AddressValueError as exc:
+        raise ConfigError(
+            f"Invalid IPv4 address in 'server.host': {host!r}"
+        ) from exc
+
+    port = server.get("port")
+
+    if isinstance(port, bool) or not isinstance(port, int):
+        raise ConfigError("'server.port' must be an integer.")
+
+    if not 1 <= port <= 65535:
+        raise ConfigError("'server.port' must be between 1 and 65535.")
+
+    game = config.get("game")
+    if not isinstance(game, dict):
+        raise ConfigError("'game' must be an object.")
+
+    mode = game.get("mode")
+    if not isinstance(mode, str) or not mode:
+        raise ConfigError("'game.mode' must be a non-empty string.")
