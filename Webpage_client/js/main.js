@@ -5,13 +5,17 @@ let joined = false;
 let landlordMode = "rob";
 let hostId = null;
 const playerNames = {};
+let latestLobbyMessage = null;
+let latestGameState = null;
+let latestNotice = null;
 
 const loginScreen = document.getElementById("login-screen");
 const gameScreen = document.getElementById("game-screen");
 const statusElement = document.getElementById("connection-status");
 
-function setStatus(text, online) {
-    statusElement.textContent = text;
+function setStatus(key, online) {
+    statusElement.dataset.i18n = key;
+    statusElement.textContent = i18n.t(key);
     statusElement.className = `status ${online ? "online" : "offline"}`;
 }
 
@@ -33,21 +37,120 @@ function updatePlayerNames(players) {
 function showGameState(state) {
     if (!state) return;
 
+    latestGameState = state;
+    latestLobbyMessage = null;
+
     renderGame(
-        { ...state, host_id: hostId },
+        state,
         playerNames,
         landlordMode,
         sendGameAction
     );
 }
 
+function showLobbyState(message) {
+    if (!message) return;
+
+    latestLobbyMessage = message;
+    latestGameState = null;
+
+    hostId = message.host_id;
+    updatePlayerNames(message.players);
+    renderLobby(message, nickname);
+
+    const players = message.players || [];
+
+    const roomFull =
+        players.length === message.required_players;
+
+    const allReady =
+        players.length > 0 &&
+        players.every(player => player.ready);
+
+    let statusMessage;
+
+    if (message.notice) {
+        latestNotice = message.notice;
+        renderNotice(message.notice);
+        return;
+    }
+
+    latestNotice = null;
+
+    if (roomFull && allReady) {
+        statusMessage = i18n.t("room.allReady");
+    } else if (allReady && !roomFull) {
+        statusMessage = i18n.t("room.waitingForPlayersAfterReady");
+    } else if (roomFull) {
+        statusMessage = i18n.t("room.playersArrived");
+    } else {
+        statusMessage = i18n.t("room.waiting");
+    }
+
+    document.getElementById("game-message").textContent =
+        statusMessage;
+}
+
+function renderNotice(notice) {
+    if (!notice) return;
+
+    const params = { ...(notice.params || {}) };
+    let key;
+
+    switch (notice.event) {
+        case "no_landlord":
+            key = "game.noLandlord";
+            break;
+
+        case "landlord_selected":
+            key = "game.landlordSelected";
+            break;
+
+        case "game_over":
+            key = "game.noticeWinner";
+            params.team = i18n.t(
+                params.team === "landlord"
+                    ? "game.landlordTeam"
+                    : "game.farmerTeam"
+            );
+            break;
+
+        case "host_force_ended":
+            key = "game.hostForceEnded";
+            break;
+
+        case "round_finished":
+            key = "room.roundFinished";
+            break;
+
+        case "host_terminated":
+            key = "room.hostTerminated";
+            break;
+
+        case "player_left":
+            key = "room.playerLeft";
+            break;
+
+        default:
+            document.getElementById("game-message").textContent =
+                notice.message || "";
+            return;
+    }
+
+    document.getElementById("game-message").textContent =
+        i18n.t(key, params);
+}
+
 function returnToLogin(message) {
     joined = false;
+    latestLobbyMessage = null;
+    latestGameState = null;
+    latestNotice = null;
 
     loginScreen.classList.remove("hidden");
     gameScreen.classList.add("hidden");
 
-    setStatus(i18n.t("status.disconnected"), false);
+    setStatus("status.disconnected", false);
 
     document.getElementById("login-error").textContent =
         message || i18n.t("error.serverDisconnected");
@@ -81,18 +184,18 @@ document.getElementById("login-form").addEventListener("submit", async event => 
     }
 
     try {
-        setStatus(i18n.t("status.connecting"), false);
+        setStatus("status.connecting", false);
 
         await network.connect(address);
 
         network.join(nickname);
 
-        setStatus(i18n.t("status.joining"), false);
+        setStatus("status.joining", false);
         error.textContent = i18n.t("login.validating");
 
     } catch (exception) {
         error.textContent = exception.message;
-        setStatus(i18n.t("status.connectionFailed"), false);
+        setStatus("status.connectionFailed", false);
         network.close();
     }
 });
@@ -110,50 +213,15 @@ network.onMessage = message => {
             loginScreen.classList.add("hidden");
             gameScreen.classList.remove("hidden");
 
-            setStatus(i18n.t("status.connected"), true);
+            setStatus("status.connected", true);
 
             document.getElementById("game-message").textContent =
                 i18n.t("room.welcome", { nickname: message.nickname });
             break;
 
-        case "lobby": {
-            hostId = message.host_id;
-            updatePlayerNames(message.players);
-            renderLobby(message, nickname);
-
-            const players = message.players || [];
-
-            const roomFull =
-                players.length === message.required_players;
-
-            const allReady =
-                players.length > 0 &&
-                players.every(player => player.ready);
-
-            let statusMessage;
-
-            if (message.notice) {
-                statusMessage = message.notice;
-            } else if (
-                roomFull &&
-                allReady
-            ) {
-                statusMessage = i18n.t("room.allReady");
-            } else if (
-                allReady &&
-                !roomFull
-            ) {
-                statusMessage = i18n.t("room.waitingForPlayersAfterReady");
-            } else if (roomFull) {
-                statusMessage = i18n.t("room.playersArrived");
-            } else {
-                statusMessage = i18n.t("room.waiting");
-            }
-
-            document.getElementById("game-message").textContent =
-                statusMessage;
+        case "lobby":
+            showLobbyState(message);
             break;
-        }
 
         case "game_started":
             showGameState(message.state);
@@ -170,8 +238,8 @@ network.onMessage = message => {
             break;
 
         case "game_notice":
-            document.getElementById("game-message").textContent =
-                message.message;
+            latestNotice = message;
+            renderNotice(message);
             break;
 
         case "error":
@@ -179,7 +247,7 @@ network.onMessage = message => {
                 document.getElementById("login-error").textContent =
                     message.message;
 
-                setStatus(i18n.t("status.joinFailed"), false);
+                setStatus("status.joinFailed", false);
                 network.close();
             } else {
                 document.getElementById("game-error").textContent =
@@ -199,14 +267,32 @@ network.onDisconnect = () => {
     returnToLogin(i18n.t("room.disconnected"));
 };
 
-document.getElementById("ready-button").addEventListener("click", () => {
-    const button = document.getElementById("ready-button");
+window.addEventListener("languagechange", () => {
+    if (!joined) return;
 
+    if (latestGameState) {
+        showGameState(latestGameState);
+    } else if (latestLobbyMessage) {
+        showLobbyState(latestLobbyMessage);
+    }
+
+    if (latestNotice) {
+        renderNotice(latestNotice);
+    }
+});
+
+document.getElementById("ready-button").addEventListener("click", () => {
     try {
-        if (button.textContent === i18n.t("game.forceEnd")) {
-            if (!window.confirm(
-                i18n.t("game.confirmForceEnd")
-            )) {
+        if (latestGameState) {
+            if (latestGameState.status === "finished") {
+                return;
+            }
+
+            if (latestGameState.self.id !== latestGameState.host_id) {
+                return;
+            }
+
+            if (!window.confirm(i18n.t("game.confirmForceEnd"))) {
                 return;
             }
 
@@ -214,9 +300,16 @@ document.getElementById("ready-button").addEventListener("click", () => {
             return;
         }
 
-        network.ready(button.textContent !== i18n.t("room.cancelReady"));
+        const me = latestLobbyMessage?.players?.find(
+            player => player.nickname === nickname
+        );
+
+        if (!me) return;
+
+        network.ready(!me.ready);
     } catch (error) {
-        document.getElementById("game-error").textContent = error.message;
+        document.getElementById("game-error").textContent =
+            error.message;
     }
 });
 

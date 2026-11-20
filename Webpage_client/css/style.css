@@ -46,7 +46,7 @@ body {
     letter-spacing: 1px;
 }
 
-.brand span {
+.brand .brand-separator {
     color: var(--accent);
 }
 
