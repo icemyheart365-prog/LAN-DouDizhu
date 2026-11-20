@@ -7,3 +7,15 @@ __pycache__/
 .DS_Store
 .vscode/
 .pytest_cache/
+
+# Ignore binary files
+*.exe
+*.dll
+*.so
+*.zip
+*.7z
+*.tar.gz
+*.tar
+*.jar
+# Ignore IDE specific files
+.idea/
