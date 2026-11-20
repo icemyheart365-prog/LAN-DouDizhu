@@ -2,6 +2,15 @@
 let selectedCards = new Set();
 
 function renderLobby(message, myNickname) {
+    selectedCards.clear();
+
+    document.getElementById("hand").replaceChildren();
+
+    const actionArea = document.getElementById("action-controls");
+    actionArea.replaceChildren();
+    actionArea.classList.add("hidden");
+
+    document.getElementById("opponent-info").textContent = "";
     const container = document.getElementById("players");
     container.replaceChildren();
 
@@ -40,6 +49,8 @@ function renderLobby(message, myNickname) {
     // Players can get ready before the room is full.
     readyButton.disabled = !me;
     readyButton.textContent = me?.ready ? "取消准备" : "准备";
+    readyButton.style.background = "";
+    readyButton.style.color = "";
 
     // Only the room host can start the game.
     const isHost = me?.is_host === true;
@@ -87,8 +98,13 @@ function renderGame(state, playerNames, landlordMode, send) {
     const hand = document.getElementById("hand");
     const players = state.players || [];
 
-    document.getElementById("ready-button").disabled = true;
-    document.getElementById("ready-button").textContent = "游戏进行中";
+    const readyButton = document.getElementById("ready-button");
+    const isHost = selfId === state.host_id;
+
+    readyButton.disabled = !isHost;
+    readyButton.textContent = isHost ? "强制结算" : "游戏进行中";
+    readyButton.style.background = isHost ? "#a83232" : "";
+    readyButton.style.color = isHost ? "#ffffff" : "";
     document.getElementById("start-button").hidden = true;
 
     document.getElementById("player-count").textContent = "游戏进行中";
@@ -109,7 +125,8 @@ function renderGame(state, playerNames, landlordMode, send) {
         const name = document.createElement("strong");
         name.textContent =
             nameOf(player.id) +
-            (player.id === selfId ? " (我)" : "");
+            (player.id === selfId ? " (我)" : "") +
+            (player.id === state.host_id ? " 👑 房主" : "");
 
         const info = document.createElement("span");
         info.textContent =
@@ -132,10 +149,19 @@ function renderGame(state, playerNames, landlordMode, send) {
     document.getElementById("opponent-info").textContent = tableText;
 
     if (state.status === "finished") {
-        document.getElementById("game-message").textContent =
-            `${nameOf(state.winner)} 获胜！获胜阵营：` +
-            (state.winning_team === "landlord" ? "地主" : "农民");
+        const message = document.getElementById("game-message");
 
+        if (state.end_reason === "host_terminated") {
+            message.textContent = "房主强制结束了游戏。";
+        } else if (state.winner) {
+            message.textContent =
+                `${nameOf(state.winner)} 获胜！获胜阵营：` +
+                (state.winning_team === "landlord" ? "地主" : "农民");
+        } else {
+            message.textContent = "游戏已结束。";
+        }
+
+        selectedCards.clear();
         hand.replaceChildren();
         actionArea.replaceChildren();
         actionArea.classList.add("hidden");
@@ -277,4 +303,5 @@ function renderGame(state, playerNames, landlordMode, send) {
             );
         }
     }
+
 }

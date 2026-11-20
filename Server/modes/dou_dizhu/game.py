@@ -339,9 +339,9 @@ class DouDiZhuGame:
 
     def force_end(self):
         """Terminate an active game without declaring a winner."""
-        if self.status != "playing":
+        if self.status not in ("bidding", "playing"):
             raise GameRuleError(
-                "The game can only be force-ended during gameplay."
+                "The game can only be force-ended during an active game."
             )
 
         self.status = "finished"

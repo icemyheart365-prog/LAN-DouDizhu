@@ -1,4 +1,3 @@
-
 import asyncio
 import json
 import sys
@@ -22,11 +21,15 @@ class WebRoom:
         self.host_id = None
         self.game = None
         self.lock = asyncio.Lock()
+        self.closed = False
 
     async def send(self, client, message):
         await client.send(json.dumps(message, ensure_ascii=False))
 
-    async def broadcast_lobby(self):
+    async def broadcast_lobby(self, notice=None):
+        if self.closed:
+            return
+
         message = {
             "type": "lobby",
             "host_id": self.host_id,
@@ -43,6 +46,9 @@ class WebRoom:
             "start_requirements": self.config["game"]["start_requirements"],
         }
 
+        if notice:
+            message["notice"] = notice
+
         await asyncio.gather(
             *(
                 self.send(client, message)
@@ -52,21 +58,49 @@ class WebRoom:
         )
 
     async def broadcast_game(self, event=None):
-        if self.game is None:
+        if self.game is None or self.closed:
             return
 
         for connection, player in list(self.players.items()):
             try:
+                state = self.game.player_view(player["id"])
+                state["host_id"] = self.host_id
+
                 await self.send(connection, {
                     "type": "game_state",
                     "event": event,
                     "is_host": player["id"] == self.host_id,
-                    "state": self.game.player_view(player["id"]),
+                    "state": state,
                 })
             except Exception as exc:
                 print(f"[WS] Failed to update player: {exc}")
 
+    async def send_event(self, message):
+        if self.closed:
+            return
+
+        await asyncio.gather(
+            *(
+                self.send(client, {
+                    "type": "game_notice",
+                    "message": message,
+                })
+                for client in list(self.players)
+            ),
+            return_exceptions=True,
+        )
+
+    def reset_to_lobby(self):
+        """Clear the current game and require every remaining player to ready up."""
+        self.game = None
+
+        for player in self.players.values():
+            player["ready"] = False
+
     async def start_game(self):
+        if self.closed:
+            return
+
         player_ids = [
             player["id"] for player in self.players.values()
         ]
@@ -96,18 +130,6 @@ class WebRoom:
         await self.broadcast_game("bid_accepted")
         return None
 
-    async def send_event(self, message):
-        await asyncio.gather(
-            *(
-                self.send(client, {
-                    "type": "game_notice",
-                    "message": message,
-                })
-                for client in list(self.players)
-            ),
-            return_exceptions=True,
-        )
-
     async def handle_play(self, player_id, message):
         cards = message.get("cards")
 
@@ -117,11 +139,15 @@ class WebRoom:
             return {"type": "error", "message": str(exc)}
 
         if result["type"] == "game_over":
+            winning_team = self.game.winning_team
             await self.broadcast_game("game_over")
             await self.send_event(
                 "游戏结束！获胜阵营：" +
-                ("地主" if self.game.winning_team == "landlord" else "农民")
+                ("地主" if winning_team == "landlord" else "农民")
             )
+
+            self.reset_to_lobby()
+            await self.broadcast_lobby("本局已结束，请所有玩家重新准备。")
             return None
 
         await self.broadcast_game("played")
@@ -147,6 +173,23 @@ class WebRoom:
         action = message.get("type")
 
         async with self.lock:
+            if self.closed:
+                if action == "join":
+                    # Reopen the room for a new session.
+                    self.closed = False
+                    self.host_id = None
+                    self.game = None
+                    self.players.clear()
+
+                    print("[ROOM] Closed room reopened.")
+
+                else:
+                    await self.send(client, {
+                        "type": "error",
+                        "message": "This room has been closed.",
+                    })
+                    return
+
             if action == "join":
                 if client in self.players:
                     await self.send(client, {
@@ -183,8 +226,8 @@ class WebRoom:
 
                 nickname = nickname.strip()
                 if any(
-                    p["nickname"] == nickname
-                    for p in self.players.values()
+                    player["nickname"] == nickname
+                    for player in self.players.values()
                 ):
                     await self.send(client, {
                         "type": "error",
@@ -303,6 +346,9 @@ class WebRoom:
 
                 await self.broadcast_game(result["type"])
                 await self.send_event("房主强制结束了游戏。")
+
+                self.reset_to_lobby()
+                await self.broadcast_lobby("房主强制结束了本局，请所有玩家重新准备。")
                 return
 
             if self.game is None:
@@ -328,17 +374,57 @@ class WebRoom:
                 await self.send(client, error)
 
     async def disconnect(self, client):
+        clients_to_close = []
+        room_was_closed = False
+
         async with self.lock:
             player = self.players.pop(client, None)
 
-            if player is not None:
-                print(f"[ROOM] {player['nickname']} disconnected.")
+            # Ignore duplicate disconnect callbacks and unjoined connections.
+            if player is None:
+                return
+
+            print(f"[ROOM] {player['nickname']} disconnected.")
+
+            if player["id"] == self.host_id:
+                # The host is permanent. Never transfer ownership.
+                self.closed = True
                 self.game = None
+                clients_to_close = list(self.players)
+                self.players.clear()
+                room_was_closed = True
+                print("[ROOM] Host disconnected. Room closed.")
 
-                for remaining in self.players.values():
-                    remaining["ready"] = False
+            else:
+                # A regular player's departure invalidates the current game.
+                self.reset_to_lobby()
+                await self.broadcast_lobby(
+                    f"{player['nickname']} 已离开房间，请重新准备。"
+                )
 
-                await self.broadcast_lobby()
+        # Notify and close other sockets only after releasing the room lock.
+        if room_was_closed:
+            await asyncio.gather(
+                *(
+                    self.send(client_to_close, {
+                        "type": "room_closed",
+                        "message": "房主已离开，房间已关闭。",
+                    })
+                    for client_to_close in clients_to_close
+                ),
+                return_exceptions=True,
+            )
+
+            await asyncio.gather(
+                *(
+                    client_to_close.close(
+                        code=1001,
+                        reason="Room host disconnected",
+                    )
+                    for client_to_close in clients_to_close
+                ),
+                return_exceptions=True,
+            )
 
 
 async def main():
