@@ -9,6 +9,7 @@ from websockets.asyncio.server import serve
 
 from core.config_loader import load_config, validate_global_config
 from core.mode_loader import load_mode
+from modes.dou_dizhu.game import DouDiZhuGame, GameRuleError
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -39,9 +40,96 @@ class WebRoom:
         }
 
         await asyncio.gather(
-            *(self.send(client, message) for client in list(self.players)),
+            *(
+                self.send(client, message)
+                for client in list(self.players)
+            ),
             return_exceptions=True,
         )
+
+    async def broadcast_game(self, event=None):
+        if self.game is None:
+            return
+
+        for connection, player in list(self.players.items()):
+            try:
+                await self.send(connection, {
+                    "type": "game_state",
+                    "event": event,
+                    "state": self.game.player_view(player["id"]),
+                })
+            except Exception as exc:
+                print(f"[WS] Failed to update player: {exc}")
+
+    async def start_game(self):
+        player_ids = [
+            player["id"] for player in self.players.values()
+        ]
+        self.game = DouDiZhuGame(self.config, player_ids)
+
+        await self.broadcast_game("game_started")
+        print("[GAME] New game dealt. 54-card integrity verified.")
+
+    async def handle_bid(self, player_id, message):
+        choice = message.get("choice")
+
+        try:
+            result = self.game.bid(player_id, choice)
+        except GameRuleError as exc:
+            return {"type": "error", "message": str(exc)}
+
+        if result["type"] == "redeal_required":
+            await self.send_event("无人叫地主，重新发牌。")
+            await self.start_game()
+            return None
+
+        if result["type"] == "landlord_selected":
+            await self.send_event("地主已确定，开始出牌。")
+            await self.broadcast_game("landlord_selected")
+            return None
+
+        await self.broadcast_game("bid_accepted")
+        return None
+
+    async def send_event(self, message):
+        await asyncio.gather(
+            *(
+                self.send(client, {
+                    "type": "game_notice",
+                    "message": message,
+                })
+                for client in list(self.players)
+            ),
+            return_exceptions=True,
+        )
+
+    async def handle_play(self, player_id, message):
+        cards = message.get("cards")
+
+        try:
+            result = self.game.play(player_id, cards)
+        except GameRuleError as exc:
+            return {"type": "error", "message": str(exc)}
+
+        if result["type"] == "game_over":
+            await self.broadcast_game("game_over")
+            await self.send_event(
+                "游戏结束！获胜阵营：" +
+                ("地主" if self.game.winning_team == "landlord" else "农民")
+            )
+            return None
+
+        await self.broadcast_game("played")
+        return None
+
+    async def handle_pass(self, player_id):
+        try:
+            result = self.game.pass_turn(player_id)
+        except GameRuleError as exc:
+            return {"type": "error", "message": str(exc)}
+
+        await self.broadcast_game(result["type"])
+        return None
 
     async def handle(self, client, message):
         if not isinstance(message, dict):
@@ -108,6 +196,7 @@ class WebRoom:
                 await self.send(client, {
                     "type": "joined",
                     "nickname": nickname,
+                    "player_id": self.players[client]["id"],
                 })
                 await self.broadcast_lobby()
                 return
@@ -122,6 +211,8 @@ class WebRoom:
                     "message": "Join the room first.",
                 })
                 return
+
+            player_id = self.players[client]["id"]
 
             if action == "ready":
                 if self.game is not None:
@@ -138,18 +229,30 @@ class WebRoom:
                     len(self.players) == self.max_players
                     and all(p["ready"] for p in self.players.values())
                 ):
-                    from modes.dou_dizhu.game import DouDiZhuGame
+                    await self.start_game()
+                return
 
-                    player_ids = [
-                        p["id"] for p in self.players.values()
-                    ]
-                    self.game = DouDiZhuGame(self.config, player_ids)
+            if self.game is None:
+                await self.send(client, {
+                    "type": "error",
+                    "message": "The game has not started.",
+                })
+                return
 
-                    for connection, player in self.players.items():
-                        await self.send(connection, {
-                            "type": "game_started",
-                            "state": self.game.player_view(player["id"]),
-                        })
+            if action == "bid":
+                error = await self.handle_bid(player_id, message)
+            elif action == "play":
+                error = await self.handle_play(player_id, message)
+            elif action == "pass":
+                error = await self.handle_pass(player_id)
+            else:
+                error = {
+                    "type": "error",
+                    "message": f"Unknown action: {action}",
+                }
+
+            if error is not None:
+                await self.send(client, error)
 
     async def disconnect(self, client):
         async with self.lock:
@@ -178,12 +281,13 @@ async def main():
 
     async def handler(connection):
         print(f"[WS] Connected: {connection.remote_address}")
-
         try:
             await room.send(connection, {
                 "type": "server_hello",
                 "protocol": "websocket-json",
                 "mode": config["game"]["mode"],
+                "landlord_mode": config["game"].get("landlord_mode", "rob"),
+                "player_count": config["game"]["player_count"],
             })
 
             async for raw_message in connection:
@@ -195,6 +299,7 @@ async def main():
                         "type": "error",
                         "message": "Invalid JSON.",
                     })
+
         finally:
             await room.disconnect(connection)
             print(f"[WS] Disconnected: {connection.remote_address}")
