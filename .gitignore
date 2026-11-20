@@ -19,3 +19,6 @@ __pycache__/
 *.jar
 # Ignore IDE specific files
 .idea/
+
+# i18n migration backups
+*.i18n.bak

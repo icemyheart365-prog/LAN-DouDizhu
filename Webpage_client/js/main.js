@@ -47,10 +47,10 @@ function returnToLogin(message) {
     loginScreen.classList.remove("hidden");
     gameScreen.classList.add("hidden");
 
-    setStatus("连接断开", false);
+    setStatus(i18n.t("status.disconnected"), false);
 
     document.getElementById("login-error").textContent =
-        message || "与服务器的连接已断开。";
+        message || i18n.t("error.serverDisconnected");
 
     document.getElementById("game-error").textContent = "";
     document.getElementById("game-message").textContent = "";
@@ -76,23 +76,23 @@ document.getElementById("login-form").addEventListener("submit", async event => 
     error.textContent = "";
 
     if (!address || !nickname) {
-        error.textContent = "请填写服务器地址和昵称。";
+        error.textContent = i18n.t("login.fillRequired");
         return;
     }
 
     try {
-        setStatus("连接中", false);
+        setStatus(i18n.t("status.connecting"), false);
 
         await network.connect(address);
 
         network.join(nickname);
 
-        setStatus("正在加入房间", false);
-        error.textContent = "正在验证昵称并加入房间……";
+        setStatus(i18n.t("status.joining"), false);
+        error.textContent = i18n.t("login.validating");
 
     } catch (exception) {
         error.textContent = exception.message;
-        setStatus("连接失败", false);
+        setStatus(i18n.t("status.connectionFailed"), false);
         network.close();
     }
 });
@@ -110,10 +110,10 @@ network.onMessage = message => {
             loginScreen.classList.add("hidden");
             gameScreen.classList.remove("hidden");
 
-            setStatus("已连接", true);
+            setStatus(i18n.t("status.connected"), true);
 
             document.getElementById("game-message").textContent =
-                `欢迎，${message.nickname}！等待其他玩家……`;
+                i18n.t("room.welcome", { nickname: message.nickname });
             break;
 
         case "lobby": {
@@ -138,16 +138,16 @@ network.onMessage = message => {
                 roomFull &&
                 allReady
             ) {
-                statusMessage = "所有玩家已准备，等待房主开始游戏。";
+                statusMessage = i18n.t("room.allReady");
             } else if (
                 allReady &&
                 !roomFull
             ) {
-                statusMessage = "当前玩家已全部准备，等待其他玩家加入。";
+                statusMessage = i18n.t("room.waitingForPlayersAfterReady");
             } else if (roomFull) {
-                statusMessage = "三名玩家已到齐，请准备。";
+                statusMessage = i18n.t("room.playersArrived");
             } else {
-                statusMessage = "等待其他玩家加入……";
+                statusMessage = i18n.t("room.waiting");
             }
 
             document.getElementById("game-message").textContent =
@@ -165,7 +165,7 @@ network.onMessage = message => {
 
         case "room_closed":
             returnToLogin(
-                message.message || "房主已离开，房间已关闭。"
+                message.message || i18n.t("room.closed")
             );
             break;
 
@@ -179,7 +179,7 @@ network.onMessage = message => {
                 document.getElementById("login-error").textContent =
                     message.message;
 
-                setStatus("加入失败", false);
+                setStatus(i18n.t("status.joinFailed"), false);
                 network.close();
             } else {
                 document.getElementById("game-error").textContent =
@@ -196,16 +196,16 @@ network.onMessage = message => {
 network.onDisconnect = () => {
     if (!joined) return;
 
-    returnToLogin("与服务器的连接已断开，请重新连接。");
+    returnToLogin(i18n.t("room.disconnected"));
 };
 
 document.getElementById("ready-button").addEventListener("click", () => {
     const button = document.getElementById("ready-button");
 
     try {
-        if (button.textContent === "强制结算") {
+        if (button.textContent === i18n.t("game.forceEnd")) {
             if (!window.confirm(
-                "确定要强制结束当前游戏吗？\n所有玩家都将返回准备大厅。"
+                i18n.t("game.confirmForceEnd")
             )) {
                 return;
             }
@@ -214,7 +214,7 @@ document.getElementById("ready-button").addEventListener("click", () => {
             return;
         }
 
-        network.ready(button.textContent !== "取消准备");
+        network.ready(button.textContent !== i18n.t("room.cancelReady"));
     } catch (error) {
         document.getElementById("game-error").textContent = error.message;
     }
@@ -257,7 +257,7 @@ musicFile.addEventListener("change", () => {
 document.getElementById("music-play").addEventListener("click", async () => {
     if (!music.src) {
         document.getElementById("game-error").textContent =
-            "请先选择一首本地音乐。";
+            i18n.t("music.selectFirst");
         return;
     }
 
@@ -265,7 +265,7 @@ document.getElementById("music-play").addEventListener("click", async () => {
         await music.play();
     } catch (error) {
         document.getElementById("game-error").textContent =
-            "音乐播放失败：" + error.message;
+            i18n.t("music.playFailed", { error: error.message });
     }
 });
 

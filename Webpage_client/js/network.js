@@ -13,7 +13,7 @@ class GameNetwork {
             this.socket.onopen = () => resolve();
 
             this.socket.onerror = () => {
-                reject(new Error("无法连接服务器，请检查 IP 和端口。"));
+                reject(new Error(i18n.t("login.connectionError")));
             };
 
             this.socket.onmessage = event => {
@@ -36,7 +36,7 @@ class GameNetwork {
 
     send(message) {
         if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-            throw new Error("服务器连接已断开。");
+            throw new Error(i18n.t("error.serverDisconnected"));
         }
 
         this.socket.send(JSON.stringify(message));

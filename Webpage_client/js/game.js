@@ -1,4 +1,3 @@
-
 let selectedCards = new Set();
 
 function renderLobby(message, myNickname) {
@@ -15,7 +14,10 @@ function renderLobby(message, myNickname) {
     container.replaceChildren();
 
     document.getElementById("player-count").textContent =
-        `${message.players.length} / ${message.required_players} 人`;
+        i18n.t("room.playerCount", {
+            count: message.players.length,
+            total: message.required_players
+        });
 
     for (let i = 0; i < message.required_players; i++) {
         const player = message.players[i];
@@ -26,17 +28,19 @@ function renderLobby(message, myNickname) {
             const name = document.createElement("strong");
             name.textContent =
                 player.nickname +
-                (player.nickname === myNickname ? " (我)" : "") +
-                (player.is_host ? " 👑 房主" : "");
+                (player.nickname === myNickname ? ` (${i18n.t("room.me")})` : "") +
+                (player.is_host ? ` 👑 ${i18n.t("room.host")}` : "");
 
             const state = document.createElement("span");
             state.className = player.ready ? "ready" : "waiting";
-            state.textContent = player.ready ? "● 已准备" : "● 未准备";
+            state.textContent = player.ready
+                ? `● ${i18n.t("room.ready")}`
+                : `● ${i18n.t("room.notReady")}`;
 
             slot.append(name, state);
         } else {
             slot.classList.add("empty");
-            slot.textContent = "等待玩家加入";
+            slot.textContent = i18n.t("room.waitingForPlayers");
         }
 
         container.appendChild(slot);
@@ -48,7 +52,9 @@ function renderLobby(message, myNickname) {
 
     // Players can get ready before the room is full.
     readyButton.disabled = !me;
-    readyButton.textContent = me?.ready ? "取消准备" : "准备";
+    readyButton.textContent = me?.ready
+        ? i18n.t("room.cancelReady")
+        : i18n.t("room.readyButton");
     readyButton.style.background = "";
     readyButton.style.color = "";
 
@@ -75,11 +81,11 @@ function renderLobby(message, myNickname) {
     startButton.disabled = !isHost || !canStart;
 
     if (!roomFull && requirements.require_full_room) {
-        startButton.textContent = "等待玩家加入";
+        startButton.textContent = i18n.t("room.waitingForPlayersButton");
     } else if (!allReady && requirements.require_all_ready) {
-        startButton.textContent = "等待所有玩家准备";
+        startButton.textContent = i18n.t("room.waitingForReadyButton");
     } else {
-        startButton.textContent = "开始游戏";
+        startButton.textContent = i18n.t("room.start");
     }
 }
 
@@ -102,15 +108,18 @@ function renderGame(state, playerNames, landlordMode, send) {
     const isHost = selfId === state.host_id;
 
     readyButton.disabled = !isHost;
-    readyButton.textContent = isHost ? "强制结算" : "游戏进行中";
+    readyButton.textContent = isHost
+        ? i18n.t("game.forceEnd")
+        : i18n.t("game.inProgress");
     readyButton.style.background = isHost ? "#a83232" : "";
     readyButton.style.color = isHost ? "#ffffff" : "";
     document.getElementById("start-button").hidden = true;
 
-    document.getElementById("player-count").textContent = "游戏进行中";
+    document.getElementById("player-count").textContent =
+        i18n.t("game.inProgress");
 
     const nameOf = id =>
-        playerNames[id] || `玩家 ${String(id).slice(0, 6)}`;
+        playerNames[id] || String(id).slice(0, 6);
 
     document.getElementById("players").replaceChildren();
 
@@ -125,16 +134,16 @@ function renderGame(state, playerNames, landlordMode, send) {
         const name = document.createElement("strong");
         name.textContent =
             nameOf(player.id) +
-            (player.id === selfId ? " (我)" : "") +
-            (player.id === state.host_id ? " 👑 房主" : "");
+            (player.id === selfId ? ` (${i18n.t("room.me")})` : "") +
+            (player.id === state.host_id ? ` 👑 ${i18n.t("room.host")}` : "");
 
         const info = document.createElement("span");
         info.textContent =
-            `${player.card_count} 张牌` +
-            (player.is_landlord ? " · 地主" : "");
+            i18n.t("game.cardCount", { count: player.card_count }) +
+            (player.is_landlord ? ` · ${i18n.t("game.landlord")}` : "");
 
         if (player.id === state.current_turn) {
-            info.textContent += " · 当前回合";
+            info.textContent += ` · ${i18n.t("game.currentTurn")}`;
         }
 
         slot.append(name, info);
@@ -143,8 +152,11 @@ function renderGame(state, playerNames, landlordMode, send) {
 
     const lastPlay = state.last_play;
     const tableText = lastPlay
-        ? `${nameOf(lastPlay.player_id)} 出牌：${lastPlay.cards.join(" ")}`
-        : "当前没有待跟的牌";
+        ? i18n.t("game.lastPlay", {
+            nickname: nameOf(lastPlay.player_id),
+            cards: lastPlay.cards.join(" ")
+        })
+        : i18n.t("game.noPendingPlay");
 
     document.getElementById("opponent-info").textContent = tableText;
 
@@ -152,13 +164,16 @@ function renderGame(state, playerNames, landlordMode, send) {
         const message = document.getElementById("game-message");
 
         if (state.end_reason === "host_terminated") {
-            message.textContent = "房主强制结束了游戏。";
+            message.textContent = i18n.t("game.hostForceEnded");
         } else if (state.winner) {
-            message.textContent =
-                `${nameOf(state.winner)} 获胜！获胜阵营：` +
-                (state.winning_team === "landlord" ? "地主" : "农民");
+            message.textContent = i18n.t("game.winner", {
+                nickname: nameOf(state.winner),
+                team: state.winning_team === "landlord"
+                    ? i18n.t("game.landlordTeam")
+                    : i18n.t("game.farmerTeam")
+            });
         } else {
-            message.textContent = "游戏已结束。";
+            message.textContent = i18n.t("game.ended");
         }
 
         selectedCards.clear();
@@ -174,8 +189,10 @@ function renderGame(state, playerNames, landlordMode, send) {
 
         document.getElementById("game-message").textContent =
             myTurn
-                ? "轮到你叫地主了！"
-                : `等待 ${nameOf(bidder)} 叫地主……`;
+                ? i18n.t("game.yourBiddingTurn")
+                : i18n.t("game.waitingForBid", {
+                    nickname: nameOf(bidder)
+                });
 
         hand.replaceChildren();
 
@@ -197,17 +214,17 @@ function renderGame(state, playerNames, landlordMode, send) {
         if (myTurn) {
             if (landlordMode === "rob") {
                 actionArea.append(
-                    createActionButton("不抢地主", () =>
+                    createActionButton(i18n.t("action.noRob"), () =>
                         send({ type: "bid", choice: false })
                     ),
-                    createActionButton("抢地主", () =>
+                    createActionButton(i18n.t("action.rob"), () =>
                         send({ type: "bid", choice: true }),
                         "primary-button"
                     )
                 );
             } else {
                 actionArea.append(
-                    createActionButton("不叫", () =>
+                    createActionButton(i18n.t("action.noBid"), () =>
                         send({ type: "bid", choice: 0 })
                     )
                 );
@@ -215,8 +232,9 @@ function renderGame(state, playerNames, landlordMode, send) {
                 for (let bid = 1; bid <= 3; bid++) {
                     if (bid > state.highest_bid) {
                         actionArea.append(
-                            createActionButton(`${bid} 分`, () =>
-                                send({ type: "bid", choice: bid }),
+                            createActionButton(
+                                i18n.t("action.bidPoints", { points: bid }),
+                                () => send({ type: "bid", choice: bid }),
                                 "primary-button"
                             )
                         );
@@ -230,14 +248,18 @@ function renderGame(state, playerNames, landlordMode, send) {
 
     if (state.status !== "playing") {
         document.getElementById("game-message").textContent =
-            `当前状态：${state.status}`;
+            i18n.t("game.currentStatus", { status: state.status });
         return;
     }
 
     const myTurn = state.current_turn === selfId;
 
     document.getElementById("game-message").textContent =
-        myTurn ? "轮到你出牌" : `等待 ${nameOf(state.current_turn)} 出牌……`;
+        myTurn
+            ? i18n.t("game.yourPlayingTurn")
+            : i18n.t("game.waitingForPlay", {
+                nickname: nameOf(state.current_turn)
+            });
 
     hand.replaceChildren();
 
@@ -277,7 +299,7 @@ function renderGame(state, playerNames, landlordMode, send) {
         const selected = [...selectedCards];
 
         const playButton = createActionButton(
-            `出牌 (${selected.length})`,
+            i18n.t("action.play", { count: selected.length }),
             () => {
                 if (!selected.length) return;
 
@@ -296,12 +318,11 @@ function renderGame(state, playerNames, landlordMode, send) {
 
         if (canPass) {
             actionArea.appendChild(
-                createActionButton("不出 / Pass", () => {
+                createActionButton(i18n.t("action.pass"), () => {
                     selectedCards.clear();
                     send({ type: "pass" });
                 })
             );
         }
     }
-
 }

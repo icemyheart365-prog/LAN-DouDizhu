@@ -365,15 +365,6 @@ footer {
     gap: 10px;
 }
 
-.topbar-actions {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    flex-shrink: 0;
-}
-
 /* Language picker */
 .topbar-actions {
     display: flex;
