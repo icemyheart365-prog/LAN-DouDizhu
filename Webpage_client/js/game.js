@@ -100,6 +100,15 @@ function createActionButton(text, onClick, className = "secondary-button") {
 
 function renderGame(state, playerNames, landlordMode, send) {
     const selfId = state.self.id;
+
+    // Keep only cards that are still present in the current hand.
+    const currentCards = new Set(state.self.cards);
+
+    for (const card of selectedCards) {
+        if (!currentCards.has(card)) {
+            selectedCards.delete(card);
+        }
+    }
     const actionArea = document.getElementById("action-controls");
     const hand = document.getElementById("hand");
     const players = state.players || [];

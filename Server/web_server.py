@@ -75,7 +75,7 @@ class WebRoom:
             except Exception as exc:
                 print(f"[WS] Failed to update player: {exc}")
 
-    async def send_event(self, message):
+    async def send_event(self, event, params=None):
         if self.closed:
             return
 
@@ -83,7 +83,8 @@ class WebRoom:
             *(
                 self.send(client, {
                     "type": "game_notice",
-                    "message": message,
+                    "event": event,
+                    "params": params or {},
                 })
                 for client in list(self.players)
             ),
@@ -118,12 +119,12 @@ class WebRoom:
             return {"type": "error", "message": str(exc)}
 
         if result["type"] == "redeal_required":
-            await self.send_event("无人叫地主，重新发牌。")
+            await self.send_event("no_landlord")
             await self.start_game()
             return None
 
         if result["type"] == "landlord_selected":
-            await self.send_event("地主已确定，开始出牌。")
+            await self.send_event("landlord_selected")
             await self.broadcast_game("landlord_selected")
             return None
 
@@ -142,12 +143,14 @@ class WebRoom:
             winning_team = self.game.winning_team
             await self.broadcast_game("game_over")
             await self.send_event(
-                "游戏结束！获胜阵营：" +
-                ("地主" if winning_team == "landlord" else "农民")
+                "game_over",
+                {"team": winning_team}
             )
 
             self.reset_to_lobby()
-            await self.broadcast_lobby("本局已结束，请所有玩家重新准备。")
+            await self.broadcast_lobby({
+                "event": "round_finished"
+            })
             return None
 
         await self.broadcast_game("played")
@@ -345,10 +348,12 @@ class WebRoom:
                     return
 
                 await self.broadcast_game(result["type"])
-                await self.send_event("房主强制结束了游戏。")
+                await self.send_event("host_force_ended")
 
                 self.reset_to_lobby()
-                await self.broadcast_lobby("房主强制结束了本局，请所有玩家重新准备。")
+                await self.broadcast_lobby({
+                    "event": "host_terminated"
+                })
                 return
 
             if self.game is None:
@@ -398,9 +403,12 @@ class WebRoom:
             else:
                 # A regular player's departure invalidates the current game.
                 self.reset_to_lobby()
-                await self.broadcast_lobby(
-                    f"{player['nickname']} 已离开房间，请重新准备。"
-                )
+                await self.broadcast_lobby({
+                    "event": "player_left",
+                    "params": {
+                        "nickname": player["nickname"]
+                    }
+                })
 
         # Notify and close other sockets only after releasing the room lock.
         if room_was_closed:
