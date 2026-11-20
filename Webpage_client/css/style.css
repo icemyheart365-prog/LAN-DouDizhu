@@ -364,3 +364,123 @@ footer {
     justify-content: center;
     gap: 10px;
 }
+
+.topbar-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+/* Language picker */
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.language-picker {
+    position: relative;
+}
+
+.language-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+
+    background: transparent;
+    color: var(--text);
+
+    border: 0;
+    border-radius: 30px;
+
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .18s, color .18s;
+}
+
+.language-trigger:hover,
+.language-trigger[aria-expanded="true"] {
+    background: #ffffff0c;
+    color: var(--accent);
+}
+
+.language-chevron {
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid var(--muted);
+    border-bottom: 1.5px solid var(--muted);
+    transform: rotate(45deg) translateY(-2px);
+    transition: transform .18s;
+}
+
+.language-trigger[aria-expanded="true"] .language-chevron {
+    transform: rotate(225deg) translate(-2px, -1px);
+}
+
+.language-menu {
+    position: absolute;
+    z-index: 100;
+    top: calc(100% + 8px);
+    right: 0;
+
+    min-width: 175px;
+    padding: 5px;
+
+    background: #1b2b21;
+    border: 1px solid #ffffff12;
+    border-radius: 12px;
+
+    box-shadow: 0 12px 32px #0005;
+
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity .16s, transform .16s;
+}
+
+.language-menu.hidden {
+    display: none;
+}
+
+.language-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    width: 100%;
+    padding: 10px 12px;
+
+    background: transparent;
+    color: var(--muted);
+
+    border: 0;
+    border-radius: 8px;
+
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+.language-option:hover {
+    background: #ffffff0c;
+    color: var(--text);
+}
+
+.language-option.active {
+    background: #54d69a18;
+    color: var(--accent);
+}
+
+.language-option.active::after {
+    content: "✓";
+    font-size: 12px;
+}

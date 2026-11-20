@@ -11,22 +11,46 @@
     <main class="app">
         <header class="topbar">
             <div class="brand">♠ LAN<span>·</span>DouDizhu</div>
-            <div id="connection-status" class="status offline">未连接</div>
+
+            <div class="topbar-actions">
+                <div class="language-picker" id="language-picker">
+                    <button
+                        type="button"
+                        id="language-trigger"
+                        class="language-trigger"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                    >
+                        <span id="language-current">简体中文</span>
+                        <span class="language-chevron"></span>
+                    </button>
+
+                    <div
+                        id="language-menu"
+                        class="language-menu hidden"
+                        role="menu"
+                    ></div>
+                </div>
+
+                <div id="connection-status"
+                     class="status offline"
+                     data-i18n="status.offline"></div>
+            </div>
         </header>
 
         <section id="login-screen" class="login-panel">
             <div class="hero-icon">🃏</div>
-            <h1>局域网斗地主</h1>
-            <p class="subtitle">三人牌局 · 好友同乐</p>
+            <h1 data-i18n="app.title"></h1>
+            <p class="subtitle" data-i18n="app.subtitle"></p>
 
             <form id="login-form">
-                <label for="server-address">服务器地址</label>
+                <label for="server-address" data-i18n="login.serverAddress"></label>
                 <input id="server-address" value="127.0.0.1" required>
 
-                <label for="nickname">玩家昵称</label>
-                <input id="nickname" maxlength="20" placeholder="输入你的昵称" required>
+                <label for="nickname" data-i18n="login.nickname"></label>
+                <input id="nickname" maxlength="20" data-i18n-placeholder="login.nicknamePlaceholder" required>
 
-                <button type="submit" class="primary-button">连接并加入房间</button>
+                <button type="submit" class="primary-button" data-i18n="login.join"></button>
             </form>
 
             <p id="login-error" class="error"></p>
@@ -35,8 +59,8 @@
         <section id="game-screen" class="game-screen hidden">
             <div class="table-info">
                 <div>
-                    <span class="eyebrow">GAME ROOM</span>
-                    <h2>好友牌局</h2>
+                    <span class="eyebrow" data-i18n="room.eyebrow"></span>
+                    <h2 data-i18n="room.title"></h2>
                 </div>
                 <span id="player-count">0 / 3 人</span>
             </div>
@@ -50,10 +74,10 @@
             <section id="table" class="table">
                 <div class="table-decoration">LAN · DOU DIZHU</div>
                 <div class="music-panel">
-                    <span>♫ 背景音乐</span>
+                    <span data-i18n="music.title"></span>
                     <input id="music-file" type="file" accept="audio/*">
-                    <button id="music-play" type="button">播放</button>
-                    <button id="music-pause" type="button">暂停</button>
+                    <button id="music-play" type="button" data-i18n="music.play"></button>
+                    <button id="music-pause" type="button" data-i18n="music.pause"></button>
                     <input id="music-volume" type="range" min="0" max="1" step="0.05" value="0.35">
                     <audio id="game-music" loop></audio>
                 </div>
@@ -72,14 +96,14 @@
                     class="primary-button"
                     type="button"
                     hidden
-                >
-                    开始游戏
+                 data-i18n="room.start">
+
                 </button>
-                <button id="ready-button" class="primary-button" disabled>
-                    准备
+                <button id="ready-button" class="primary-button" disabled data-i18n="room.readyButton">
+
                 </button>
-                <button id="leave-button" class="secondary-button">
-                    离开房间
+                <button id="leave-button" class="secondary-button" data-i18n="room.leave">
+
                 </button>
             </div>
 
@@ -91,6 +115,7 @@
         </footer>
     </main>
 
+    <script src="js/i18n.js"></script>
     <script src="js/network.js"></script>
     <script src="js/game.js"></script>
     <script src="js/main.js"></script>
